@@ -17,8 +17,19 @@ import java.io.ByteArrayInputStream;
 import javax.swing.*;
 import java.awt.*;
 
+import com.mongodb.MongoClientSettings;
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.MongoCursor;
+
+import org.bson.Document;
+
 public class Main {
     public static void main(String[] args) {
+
+        String connectionString = "mongodb+srv://feumpi:oT9KImFdnTvT3p6j@cluster0.bvdr7.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
 
         Tesseract tesseract = new Tesseract();
         tesseract.setDatapath("/opt/homebrew/Cellar/tesseract-lang/4.1.0/share/tessdata/"); // Altere para o caminho correto
@@ -73,15 +84,33 @@ public class Main {
 
                 BufferedImage finalImage = rotateImage(resizedImage, 90);
 
-                //showImage(finalImage);
+                showImage(finalImage);
 
                 // Realiza o OCR na imagem
                 String text = tesseract.doOCR(finalImage);
                 System.out.println(text);
 
+                try (MongoClient mongoClient = MongoClients.create(connectionString)) {
+
+                    MongoDatabase database = mongoClient.getDatabase("remediario");
+                    MongoCollection<Document> collection = database.getCollection("remediosAnvisa");
+
+                    try (MongoCursor<Document> cursor = collection.find().iterator()) {
+                        while (cursor.hasNext()) {
+                            Document doc = cursor.next();
+
+                        }
+                    }
+
+                } catch (Exception e) {
+                    //e.printStackTrace();
+                }
+
                 ArrayList<String> remedios = new ArrayList<String>();
                 remedios.add("Venlafaxina");
                 remedios.add("Tylenol");
+
+
 
                 for(String remedio: remedios) {
                    if(text.contains(remedio)) {
@@ -91,7 +120,7 @@ public class Main {
                    }
                 }
 
-                // Retorna o texto como resposta
+                // Retorna o texto inteiro como resposta
                 ctx.result(text).contentType("text/plain");
 
 
@@ -104,29 +133,28 @@ public class Main {
     }
 
     public static void showImage(BufferedImage image) {
-        // Create a JFrame to hold the image
+
         JFrame frame = new JFrame("Image Display");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-        // Create a JPanel to render the image
         JPanel panel = new JPanel() {
             @Override
             protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
                 if (image != null) {
-                    // Draw the image in the center of the panel
+
                     g.drawImage(image, 0, 0, this.getWidth(), this.getHeight(), this);
                 }
             }
 
             @Override
             public Dimension getPreferredSize() {
-                // Set the preferred size to match the image dimensions
+
                 return new Dimension(image.getWidth(), image.getHeight());
             }
         };
 
-        // Add the panel to the frame
+
         frame.add(panel);
         frame.pack(); // Adjust the frame size to fit the panel
         frame.setLocationRelativeTo(null); // Center the frame on the screen
@@ -134,24 +162,19 @@ public class Main {
     }
 
     public static BufferedImage rotateImage(BufferedImage originalImage, double angle) {
-        // Calculate the angle in radians
+
         double radians = Math.toRadians(angle);
 
-        // Get the width and height of the original image
         int width = originalImage.getWidth();
         int height = originalImage.getHeight();
 
-        // Calculate the new dimensions for the rotated image
         int newWidth = (int) Math.round(Math.abs(width * Math.cos(radians)) + Math.abs(height * Math.sin(radians)));
         int newHeight = (int) Math.round(Math.abs(height * Math.cos(radians)) + Math.abs(width * Math.sin(radians)));
 
-        // Create a new buffered image to hold the rotated image
         BufferedImage rotatedImage = new BufferedImage(newWidth, newHeight, originalImage.getType());
 
-        // Create a graphics object to draw on the rotated image
         Graphics2D g2d = rotatedImage.createGraphics();
 
-        // Set rendering hints for better quality
         g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
